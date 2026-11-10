@@ -1,1 +1,1002 @@
-# municipio-atlantirp2
+<!DOCTYPE html>
+<html lang="it" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Scontrini & Calcolatore</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body class="h-full flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- TOP NAVBAR -->
+    <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700/60 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-gradient-to-tr from-indigo-500 to-purple-500 p-2 rounded-xl shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid font-bold fa-receipt text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-tight text-white leading-tight">ScontriniCalc</h1>
+                    <p class="text-xs text-slate-400">Calcolo & Monitoraggio Admin</p>
+                </div>
+            </div>
+
+            <!-- User Status & Actions -->
+            <div id="navUserArea" class="flex items-center space-x-4">
+                <!-- Dynamic Content injected via JS -->
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- AUTH MODAL / VIEW (IF NOT LOGGED IN) -->
+        <div id="authView" class="max-w-md mx-auto my-8 bg-slate-800 border border-slate-700/80 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-white mb-1">Accedi al tuo Account</h2>
+                <p class="text-sm text-slate-400">Inserisci i tuoi dati o usa Discord per registrare i tuoi scontrini.</p>
+            </div>
+
+            <!-- Tabs: Login / Register -->
+            <div class="flex bg-slate-900/60 p-1 rounded-xl mb-6 border border-slate-700/50">
+                <button id="tabLoginBtn" onclick="switchAuthTab('login')" class="flex-1 py-2 text-sm font-medium rounded-lg transition-all text-white bg-indigo-600 shadow">Accedi</button>
+                <button id="tabRegisterBtn" onclick="switchAuthTab('register')" class="flex-1 py-2 text-sm font-medium text-slate-400 hover:text-white transition-all">Registrati</button>
+            </div>
+
+            <!-- Discord Auth Button -->
+            <button onclick="handleDiscordLogin()" class="w-full mb-5 flex items-center justify-center gap-3 bg-[#5865F2] hover:bg-[#4752C4] text-white font-medium py-2.5 px-4 rounded-xl shadow-md transition-all">
+                <i class="fa-brands fa-discord text-xl"></i>
+                <span>Accedi con Discord</span>
+            </button>
+
+            <div class="relative flex py-2 items-center mb-5">
+                <div class="flex-grow border-t border-slate-700"></div>
+                <span class="flex-shrink mx-4 text-xs text-slate-500 uppercase tracking-wider font-semibold">Oppure con Nickname</span>
+                <div class="flex-grow border-t border-slate-700"></div>
+            </div>
+
+            <!-- Auth Form -->
+            <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Nickname</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                            <i class="fa-solid fa-user"></i>
+                        </span>
+                        <input type="text" id="authNick" required class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none transition-all" placeholder="es. MarioRossi">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" id="authPass" required class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none transition-all" placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div id="roleSelectionGroup" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">Ruolo Utente</label>
+                        <select id="authRole" onchange="toggleAdminKeyField()" class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 rounded-xl py-2.5 px-3 text-sm text-white outline-none">
+                            <option value="user">Utente Standard</option>
+                            <option value="admin">Amministratore (Admin)</option>
+                        </select>
+                    </div>
+
+                    <!-- ADMIN SECRET KEY FIELD -->
+                    <div id="adminKeyContainer" class="hidden">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-amber-400 mb-1.5">
+                            <i class="fa-solid fa-key mr-1"></i> Codice Segreto Admin
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-shield-cat"></i>
+                            </span>
+                            <input type="password" id="authAdminKey" class="w-full bg-slate-900 border border-amber-500/50 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none transition-all" placeholder="Inserisci il PIN segreto">
+                        </div>
+                        <p class="text-[10px] text-amber-400/80 mt-1">Solo chi possiede la chiave segreta (default: <strong>ADMIN123</strong>) può accedere come Admin.</p>
+                    </div>
+                </div>
+
+                <div id="authError" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-lg flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span id="authErrorMsg">Messaggio di errore</span>
+                </div>
+
+                <button type="submit" id="authSubmitBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2">
+                    <span>Accedi ora</span>
+                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                </button>
+            </form>
+        </div>
+
+        <!-- APP DASHBOARD (DISPLAYED AFTER LOGIN) -->
+        <div id="appDashboard" class="hidden space-y-6">
+            
+            <!-- CONTROLS & NAVIGATION TABS -->
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-800 p-3 sm:p-4 rounded-2xl border border-slate-700/70 shadow-sm">
+                <!-- Navigation Tabs -->
+                <div class="flex bg-slate-900/80 p-1 rounded-xl w-full sm:w-auto border border-slate-700/50">
+                    <button id="viewMyReceiptsTab" onclick="switchAppView('my')" class="flex-1 sm:flex-initial px-5 py-2 rounded-lg text-sm font-medium transition-all bg-indigo-600 text-white shadow">
+                        <i class="fa-solid fa-receipt mr-2"></i>I Miei Scontrini
+                    </button>
+                    <button id="viewAdminTab" onclick="switchAppView('admin')" class="hidden flex-1 sm:flex-initial px-5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-user-shield mr-2"></i>Pannello Admin
+                    </button>
+                </div>
+
+                <!-- Action Button for New Receipt -->
+                <button onclick="openReceiptModal()" class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-semibold px-4 py-2 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Nuovo Scontrino</span>
+                </button>
+            </div>
+
+            <!-- VIEW 1: MY RECEIPTS USER DASHBOARD -->
+            <div id="userReceiptsView" class="space-y-6">
+                <!-- USER METRICS -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-slate-800 border border-slate-700/70 p-5 rounded-2xl flex items-center gap-4">
+                        <div class="bg-indigo-500/10 p-3.5 rounded-xl text-indigo-400">
+                            <i class="fa-solid fa-wallet text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 font-medium">Spesa Totale</p>
+                            <h3 id="userTotalAmount" class="text-2xl font-bold text-white">€0,00</h3>
+                        </div>
+                    </div>
+                    <div class="bg-slate-800 border border-slate-700/70 p-5 rounded-2xl flex items-center gap-4">
+                        <div class="bg-emerald-500/10 p-3.5 rounded-xl text-emerald-400">
+                            <i class="fa-solid fa-file-invoice text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 font-medium">Scontrini Registrati</p>
+                            <h3 id="userReceiptCount" class="text-2xl font-bold text-white">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-slate-800 border border-slate-700/70 p-5 rounded-2xl flex items-center gap-4">
+                        <div class="bg-amber-500/10 p-3.5 rounded-xl text-amber-400">
+                            <i class="fa-solid fa-calculator text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 font-medium">Media per Scontrino</p>
+                            <h3 id="userAvgAmount" class="text-2xl font-bold text-white">€0,00</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- USER RECEIPTS LIST -->
+                <div class="bg-slate-800 border border-slate-700/70 rounded-2xl p-5 shadow-lg space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-indigo-400"></i>
+                            <span>Storico Scontrini Inseriti</span>
+                        </h2>
+                    </div>
+
+                    <div id="userReceiptsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Receipts loaded dynamically -->
+                    </div>
+
+                    <div id="emptyUserReceipts" class="hidden text-center py-12 border-2 border-dashed border-slate-700/60 rounded-xl">
+                        <i class="fa-solid fa-receipt text-4xl text-slate-600 mb-3 block"></i>
+                        <p class="text-slate-400 font-medium mb-1">Nessun scontrino presente</p>
+                        <p class="text-slate-500 text-xs mb-4">Inizia calcolando e registrando il tuo primo scontrino.</p>
+                        <button onclick="openReceiptModal()" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-xl">
+                            <i class="fa-solid fa-plus"></i> Calcola Ora
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: ADMIN DASHBOARD (PUBLIC OVERVIEW OF ALL USERS) -->
+            <div id="adminReceiptsView" class="hidden space-y-6">
+                <div class="bg-indigo-950/40 border border-indigo-500/30 p-4 rounded-2xl flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-indigo-600 text-white p-2.5 rounded-xl">
+                            <i class="fa-solid fa-shield-halved text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-white">Pannello Amministratore Globale</h3>
+                            <p class="text-xs text-indigo-300">Visualizza e controlla tutti gli scontrini inviati da ciascun utente nel sistema.</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-semibold px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full border border-indigo-500/40">Admin Mode</span>
+                </div>
+
+                <!-- ADMIN METRICS -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-slate-800 border border-slate-700/70 p-4 rounded-2xl">
+                        <p class="text-xs text-slate-400 font-medium">Totale Generale Scontrini</p>
+                        <h4 id="adminGlobalTotal" class="text-2xl font-bold text-white mt-1">€0,00</h4>
+                    </div>
+                    <div class="bg-slate-800 border border-slate-700/70 p-4 rounded-2xl">
+                        <p class="text-xs text-slate-400 font-medium">Numero Totale Scontrini</p>
+                        <h4 id="adminGlobalCount" class="text-2xl font-bold text-emerald-400 mt-1">0</h4>
+                    </div>
+                    <div class="bg-slate-800 border border-slate-700/70 p-4 rounded-2xl">
+                        <p class="text-xs text-slate-400 font-medium">Utenti Attivi</p>
+                        <h4 id="adminGlobalUsers" class="text-2xl font-bold text-indigo-400 mt-1">0</h4>
+                    </div>
+                    <div class="bg-slate-800 border border-slate-700/70 p-4 rounded-2xl">
+                        <p class="text-xs text-slate-400 font-medium">Media Generale</p>
+                        <h4 id="adminGlobalAvg" class="text-2xl font-bold text-amber-400 mt-1">€0,00</h4>
+                    </div>
+                </div>
+
+                <!-- SEARCH & FILTER BAR FOR ADMIN -->
+                <div class="bg-slate-800 border border-slate-700/70 p-4 rounded-2xl flex flex-col md:flex-row gap-4 justify-between items-center">
+                    <div class="relative w-full md:w-80">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input type="text" id="adminSearchInput" oninput="renderAdminView()" placeholder="Cerca per Nickname o Titolo..." class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 rounded-xl py-2 pl-9 pr-4 text-xs text-white outline-none">
+                    </div>
+                    <div class="flex items-center gap-3 w-full md:w-auto">
+                        <label class="text-xs text-slate-400 font-medium whitespace-nowrap">Filtra Utente:</label>
+                        <select id="adminUserFilter" onchange="renderAdminView()" class="w-full md:w-48 bg-slate-900 border border-slate-700 rounded-xl py-2 px-3 text-xs text-white outline-none">
+                            <option value="ALL font-bold">Tutti gli utenti</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- ADMIN TABLE / LIST OF ALL USER RECEIPTS -->
+                <div class="bg-slate-800 border border-slate-700/70 rounded-2xl overflow-hidden shadow-lg">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300">
+                            <thead class="bg-slate-900/80 text-xs uppercase tracking-wider text-slate-400 border-b border-slate-700">
+                                <tr>
+                                    <th class="px-6 py-3.5">Utente (Nick)</th>
+                                    <th class="px-6 py-3.5">Titolo / Negozio</th>
+                                    <th class="px-6 py-3.5">Data Inserimento</th>
+                                    <th class="px-6 py-3.5">Prodotti</th>
+                                    <th class="px-6 py-3.5">Totale Calcolato</th>
+                                    <th class="px-6 py-3.5 text-right">Azione</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminReceiptsTableBody" class="divide-y divide-slate-700/60">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="emptyAdminReceipts" class="hidden text-center py-12">
+                        <i class="fa-solid fa-folder-open text-4xl text-slate-600 mb-2"></i>
+                        <p class="text-slate-400 text-sm">Nessuno scontrino trovato con i filtri selezionati.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- MODAL: ADD / CALCULATE NEW RECEIPT -->
+    <div id="receiptModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-800 border border-slate-700/80 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative my-8">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-700">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-calculator text-indigo-400"></i>
+                    <span>Calcolatore & Registrazione Scontrino</span>
+                </h3>
+                <button onclick="closeReceiptModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <form id="receiptForm" onsubmit="handleSaveReceipt(event)" class="mt-4 space-y-5">
+                <!-- Main Header info -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Titolo / Negozio</label>
+                        <input type="text" id="recTitle" required placeholder="es. Supermercato Esselunga" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Data Scontrino</label>
+                        <input type="date" id="recDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none">
+                    </div>
+                </div>
+
+                <!-- Itemized Entries Section -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-semibold uppercase text-slate-300">Articoli Scontrino</label>
+                        <button type="button" onclick="addReceiptRow()" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1">
+                            <i class="fa-solid fa-plus"></i> Aggiungi Riga
+                        </button>
+                    </div>
+
+                    <div id="receiptRowsContainer" class="space-y-3 max-h-60 overflow-y-auto pr-1">
+                        <!-- Rows dynamically generated -->
+                    </div>
+                </div>
+
+                <!-- Calculations Breakdown -->
+                <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700 space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Sconto Extra (€)</label>
+                            <input type="number" step="0.01" id="recDiscount" value="0.00" oninput="updateCalculatedTotals()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Mancia / Extra (€)</label>
+                            <input type="number" step="0.01" id="recTip" value="0.00" oninput="updateCalculatedTotals()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white outline-none">
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-800 pt-3 flex flex-col gap-1 text-xs">
+                        <div class="flex justify-between text-slate-400">
+                            <span>Subtotale Articoli:</span>
+                            <span id="calcSubtotal">€0,00</span>
+                        </div>
+                        <div class="flex justify-between text-slate-400">
+                            <span>Totale IVA:</span>
+                            <span id="calcTax">€0,00</span>
+                        </div>
+                        <div class="flex justify-between text-base font-bold text-white pt-2 border-t border-slate-700">
+                            <span class="text-emerald-400">Totale Finale Scontrino:</span>
+                            <span id="calcGrandTotal" class="text-emerald-400">€0,00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeReceiptModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs font-semibold text-white">Annulla</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-semibold text-white shadow-lg shadow-indigo-600/30">
+                        Salva & Calcola
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: RECEIPT DETAILS VIEW -->
+    <div id="detailsModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-800 border border-slate-700/80 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-700">
+                <div>
+                    <h3 id="detTitle" class="text-lg font-bold text-white">Dettaglio Scontrino</h3>
+                    <p id="detMeta" class="text-xs text-slate-400">Inserito da user in data</p>
+                </div>
+                <button onclick="closeDetailsModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="mt-4 space-y-4">
+                <div class="bg-slate-900 rounded-xl p-4 border border-slate-700/60 max-h-60 overflow-y-auto">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="text-slate-500 uppercase border-b border-slate-800 pb-2">
+                            <tr>
+                                <th class="pb-2">Articolo</th>
+                                <th class="pb-2 text-center">Qtà</th>
+                                <th class="pb-2 text-right">Prezzo</th>
+                                <th class="pb-2 text-right">Totale</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detItemsTable" class="divide-y divide-slate-800/80">
+                            <!-- Items inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/50 space-y-1.5 text-xs">
+                    <div class="flex justify-between text-slate-400">
+                        <span>Subtotale:</span>
+                        <span id="detSubtotal">€0,00</span>
+                    </div>
+                    <div class="flex justify-between text-slate-400">
+                        <span>Sconto Applicato:</span>
+                        <span id="detDiscount">-€0,00</span>
+                    </div>
+                    <div class="flex justify-between text-slate-400">
+                        <span>Mancia/Extra:</span>
+                        <span id="detTip">+€0,00</span>
+                    </div>
+                    <div class="flex justify-between text-sm font-bold text-emerald-400 pt-2 border-t border-slate-700">
+                        <span>Totale Complessivo:</span>
+                        <span id="detTotal">€0,00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-5 flex justify-end">
+                <button onclick="closeDetailsModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs font-semibold text-white">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE INITIALIZATION & APPLICATION CODE -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Admin Secret Security Code (Default setup)
+        const ADMIN_SECRET_KEY = "ADMIN123";
+
+        // Firebase Config Setup
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : { apiKey: "demo-api-key", authDomain: "demo.firebaseapp.com", projectId: "demo-app" };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'scontrini-calc-app';
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Application State
+        let currentUser = null; // Holds { nickname, role, uid }
+        let currentAuthMode = 'login'; // 'login' or 'register'
+        let receiptsData = []; // All receipts from firestore public path
+        let unsubscribeReceipts = null;
+
+        // Initialize Authentication
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.warn("Auth initialization fallback:", err);
+            }
+        }
+
+        initAuth();
+
+        // Check stored session in localStorage for local nick/role mapping
+        function loadStoredUserSession() {
+            const saved = localStorage.getItem('scontrini_user_session');
+            if (saved) {
+                try {
+                    currentUser = JSON.parse(saved);
+                    renderAppState();
+                } catch(e) {
+                    currentUser = null;
+                }
+            } else {
+                renderAppState();
+            }
+        }
+
+        // Firestore paths setup as mandated
+        const getPublicCollection = () => collection(db, 'artifacts', appId, 'public', 'data', 'receipts');
+
+        // Subscribe to Firestore Public Data
+        function subscribeReceipts() {
+            if (unsubscribeReceipts) unsubscribeReceipts();
+
+            const pubRef = getPublicCollection();
+            unsubscribeReceipts = onSnapshot(pubRef, (snapshot) => {
+                receiptsData = [];
+                snapshot.forEach((doc) => {
+                    receiptsData.push({ id: doc.id, ...doc.data() });
+                });
+                renderReceiptsViews();
+            }, (error) => {
+                console.error("Firestore sync error:", error);
+            });
+        }
+
+        // Auth Tab Switching
+        window.switchAuthTab = function(mode) {
+            currentAuthMode = mode;
+            const tabLoginBtn = document.getElementById('tabLoginBtn');
+            const tabRegisterBtn = document.getElementById('tabRegisterBtn');
+            const roleGroup = document.getElementById('roleSelectionGroup');
+            const submitBtnText = document.querySelector('#authSubmitBtn span');
+
+            if (mode === 'login') {
+                tabLoginBtn.className = "flex-1 py-2 text-sm font-medium rounded-lg transition-all text-white bg-indigo-600 shadow";
+                tabRegisterBtn.className = "flex-1 py-2 text-sm font-medium text-slate-400 hover:text-white transition-all";
+                submitBtnText.textContent = "Accedi ora";
+            } else {
+                tabRegisterBtn.className = "flex-1 py-2 text-sm font-medium rounded-lg transition-all text-white bg-indigo-600 shadow";
+                tabLoginBtn.className = "flex-1 py-2 text-sm font-medium text-slate-400 hover:text-white transition-all";
+                submitBtnText.textContent = "Crea Account";
+            }
+            toggleAdminKeyField();
+        };
+
+        // Toggle Admin secret key input field
+        window.toggleAdminKeyField = function() {
+            const role = document.getElementById('authRole').value;
+            const container = document.getElementById('adminKeyContainer');
+            if (role === 'admin') {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        };
+
+        // Handle Nickname/Password Submission
+        window.handleAuthSubmit = function(e) {
+            e.preventDefault();
+            const nick = document.getElementById('authNick').value.trim();
+            const pass = document.getElementById('authPass').value.trim();
+            const role = document.getElementById('authRole').value;
+            const adminKeyInput = document.getElementById('authAdminKey')?.value.trim();
+            const errDiv = document.getElementById('authError');
+            const errMsg = document.getElementById('authErrorMsg');
+
+            if (!nick || !pass) {
+                errMsg.textContent = "Compila tutti i campi obbligatori.";
+                errDiv.classList.remove('hidden');
+                return;
+            }
+
+            const usersDb = JSON.parse(localStorage.getItem('scontrini_registered_users') || '{}');
+
+            if (currentAuthMode === 'register') {
+                if (usersDb[nick.toLowerCase()]) {
+                    errMsg.textContent = "Questo Nickname è già registrato. Accedi invece.";
+                    errDiv.classList.remove('hidden');
+                    return;
+                }
+
+                // Check Admin Key security constraint
+                if (role === 'admin' && adminKeyInput !== ADMIN_SECRET_KEY) {
+                    errMsg.textContent = "Codice Segreto Admin errato! Impossibile creare un account Admin.";
+                    errDiv.classList.remove('hidden');
+                    return;
+                }
+
+                // Save credentials in local user store
+                usersDb[nick.toLowerCase()] = { nick, pass, role };
+                localStorage.setItem('scontrini_registered_users', JSON.stringify(usersDb));
+            } else {
+                // Login validation
+                const existing = usersDb[nick.toLowerCase()];
+                if (!existing || existing.pass !== pass) {
+                    errMsg.textContent = "Credenziali invalide. Controlla Nickname e Password.";
+                    errDiv.classList.remove('hidden');
+                    return;
+                }
+                if (role === 'admin' && existing.role !== 'admin') {
+                    if (adminKeyInput !== ADMIN_SECRET_KEY) {
+                        errMsg.textContent = "Codice Segreto Admin errato!";
+                        errDiv.classList.remove('hidden');
+                        return;
+                    }
+                }
+            }
+
+            errDiv.classList.add('hidden');
+            const loggedRole = usersDb[nick.toLowerCase()]?.role || role || 'user';
+
+            currentUser = {
+                nick: nick,
+                role: loggedRole,
+                uid: auth.currentUser ? auth.currentUser.uid : 'anon_' + Date.now()
+            };
+
+            localStorage.setItem('scontrini_user_session', JSON.stringify(currentUser));
+            renderAppState();
+        };
+
+        // Simulated Discord Login
+        window.handleDiscordLogin = function() {
+            // Generate a simulated Discord OAuth Nickname
+            const discordTags = ["ShadowPlayer", "CyberSamurai", "GamerPro", "PixelMaster", "ByteKnight"];
+            const randomTag = discordTags[Math.floor(Math.random() * discordTags.length)] + "#" + Math.floor(1000 + Math.random() * 9000);
+            
+            currentUser = {
+                nick: randomTag,
+                role: 'user', // Discord users default to normal user
+                isDiscord: true,
+                uid: auth.currentUser ? auth.currentUser.uid : 'discord_' + Date.now()
+            };
+
+            localStorage.setItem('scontrini_user_session', JSON.stringify(currentUser));
+            renderAppState();
+        };
+
+        // Logout function
+        window.handleLogout = function() {
+            currentUser = null;
+            localStorage.removeItem('scontrini_user_session');
+            renderAppState();
+        };
+
+        // UI State Switcher
+        function renderAppState() {
+            const authView = document.getElementById('authView');
+            const appDashboard = document.getElementById('appDashboard');
+            const navUserArea = document.getElementById('navUserArea');
+            const adminTab = document.getElementById('viewAdminTab');
+
+            if (!currentUser) {
+                authView.classList.remove('hidden');
+                appDashboard.classList.add('hidden');
+                navUserArea.innerHTML = '';
+            } else {
+                authView.classList.add('hidden');
+                appDashboard.classList.remove('hidden');
+
+                // Render Top Bar Info
+                navUserArea.innerHTML = `
+                    <div class="flex items-center gap-3 bg-slate-900/80 border border-slate-700/60 px-3 py-1.5 rounded-xl">
+                        <div class="w-8 h-8 rounded-lg ${currentUser.isDiscord ? 'bg-[#5865F2]' : 'bg-indigo-600'} flex items-center justify-center font-bold text-white text-xs">
+                            ${currentUser.isDiscord ? '<i class="fa-brands fa-discord"></i>' : currentUser.nick.substring(0,2).toUpperCase()}
+                        </div>
+                        <div class="text-left hidden sm:block">
+                            <p class="text-xs font-bold text-white leading-none">${currentUser.nick}</p>
+                            <p class="text-[10px] text-slate-400 capitalize">${currentUser.role === 'admin' ? '👑 Amministratore' : 'Utente'}</p>
+                        </div>
+                    </div>
+                    <button onclick="handleLogout()" title="Esci dall'account" class="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-xl transition-all">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                `;
+
+                // Admin tab visibility
+                if (currentUser.role === 'admin') {
+                    adminTab.classList.remove('hidden');
+                } else {
+                    adminTab.classList.add('hidden');
+                }
+
+                // Default view
+                switchAppView('my');
+                subscribeReceipts();
+            }
+        }
+
+        // Switch between "My Receipts" and "Admin Dashboard"
+        window.switchAppView = function(view) {
+            const userView = document.getElementById('userReceiptsView');
+            const adminView = document.getElementById('adminReceiptsView');
+            const myBtn = document.getElementById('viewMyReceiptsTab');
+            const adminBtn = document.getElementById('viewAdminTab');
+
+            if (view === 'admin' && currentUser?.role === 'admin') {
+                userView.classList.add('hidden');
+                adminView.classList.remove('hidden');
+
+                adminBtn.className = "flex-1 sm:flex-initial px-5 py-2 rounded-lg text-sm font-medium transition-all bg-indigo-600 text-white shadow";
+                myBtn.className = "flex-1 sm:flex-initial px-5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white";
+                renderAdminView();
+            } else {
+                adminView.classList.add('hidden');
+                userView.classList.remove('hidden');
+
+                myBtn.className = "flex-1 sm:flex-initial px-5 py-2 rounded-lg text-sm font-medium transition-all bg-indigo-600 text-white shadow";
+                adminBtn.className = "flex-1 sm:flex-initial px-5 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white";
+                renderUserView();
+            }
+        };
+
+        // Render Receipts Data for logged-in user
+        function renderUserView() {
+            if (!currentUser) return;
+            const container = document.getElementById('userReceiptsContainer');
+            const emptyState = document.getElementById('emptyUserReceipts');
+            
+            const userReceipts = receiptsData.filter(r => r.userNick.toLowerCase() === currentUser.nick.toLowerCase());
+
+            // Metrics calculation
+            let totalSum = 0;
+            userReceipts.forEach(r => totalSum += (r.grandTotal || 0));
+            const count = userReceipts.length;
+            const avg = count > 0 ? (totalSum / count) : 0;
+
+            document.getElementById('userTotalAmount').textContent = `€${totalSum.toFixed(2)}`;
+            document.getElementById('userReceiptCount').textContent = count;
+            document.getElementById('userAvgAmount').textContent = `€${avg.toFixed(2)}`;
+
+            if (count === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            container.innerHTML = userReceipts.map(rec => `
+                <div class="bg-slate-900/90 border border-slate-700/80 hover:border-indigo-500/50 transition-all rounded-xl p-4 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <div>
+                                <h3 class="font-bold text-white text-base">${escapeHtml(rec.title)}</h3>
+                                <p class="text-xs text-slate-400"><i class="fa-regular fa-calendar mr-1"></i>${rec.date}</p>
+                            </div>
+                            <span class="text-lg font-extrabold text-emerald-400">€${(rec.grandTotal || 0).toFixed(2)}</span>
+                        </div>
+                        <div class="text-xs text-slate-400 mb-4 bg-slate-800/60 p-2 rounded-lg border border-slate-700/50">
+                            <span><i class="fa-solid fa-box mr-1"></i>${rec.items ? rec.items.length : 0} articoli registrati</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-800">
+                        <button onclick="showDetailsModal('${rec.id}')" class="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                            <i class="fa-solid fa-eye"></i> Vedi dettagli
+                        </button>
+                        <button onclick="deleteReceipt('${rec.id}')" class="text-xs text-slate-500 hover:text-rose-400 p-1">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Admin View (Public to Admin)
+        window.renderAdminView = function() {
+            if (currentUser?.role !== 'admin') return;
+
+            const tbody = document.getElementById('adminReceiptsTableBody');
+            const emptyState = document.getElementById('emptyAdminReceipts');
+            const searchVal = document.getElementById('adminSearchInput').value.toLowerCase();
+            const filterUser = document.getElementById('adminUserFilter').value;
+
+            // Populate User Filter dropdown
+            const userFilterSelect = document.getElementById('adminUserFilter');
+            const uniqueUsers = [...new Set(receiptsData.map(r => r.userNick))];
+            
+            // Keep existing selection if valid
+            const currentSelected = userFilterSelect.value;
+            userFilterSelect.innerHTML = `<option value="ALL">Tutti gli utenti</option>` + 
+                uniqueUsers.map(u => `<option value="${escapeHtml(u)}"${u === currentSelected ? ' selected' : ''}>${escapeHtml(u)}</option>`).join('');
+
+            // Global Metrics
+            let globalTotal = 0;
+            receiptsData.forEach(r => globalTotal += (r.grandTotal || 0));
+            const totalCount = receiptsData.length;
+            const uniqueUserCount = uniqueUsers.length;
+            const globalAvg = totalCount > 0 ? (globalTotal / totalCount) : 0;
+
+            document.getElementById('adminGlobalTotal').textContent = `€${globalTotal.toFixed(2)}`;
+            document.getElementById('adminGlobalCount').textContent = totalCount;
+            document.getElementById('adminGlobalUsers').textContent = uniqueUserCount;
+            document.getElementById('adminGlobalAvg').textContent = `€${globalAvg.toFixed(2)}`;
+
+            // Filter Receipts
+            const filtered = receiptsData.filter(r => {
+                const matchesSearch = (r.userNick && r.userNick.toLowerCase().includes(searchVal)) || 
+                                      (r.title && r.title.toLowerCase().includes(searchVal));
+                const matchesUser = filterUser === 'ALL' || r.userNick === filterUser;
+                return matchesSearch && matchesUser;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            tbody.innerHTML = filtered.map(r => `
+                <tr class="hover:bg-slate-700/30 transition-colors">
+                    <td class="px-6 py-4 font-semibold text-white flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-xs">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        ${escapeHtml(r.userNick || 'Anonimo')}
+                    </td>
+                    <td class="px-6 py-4">${escapeHtml(r.title)}</td>
+                    <td class="px-6 py-4 text-xs text-slate-400">${r.date}</td>
+                    <td class="px-6 py-4 text-xs">${r.items ? r.items.length : 0} articoli</td>
+                    <td class="px-6 py-4 font-bold text-emerald-400">€${(r.grandTotal || 0).toFixed(2)}</td>
+                    <td class="px-6 py-4 text-right space-x-2">
+                        <button onclick="showDetailsModal('${r.id}')" class="px-2.5 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 rounded-lg text-xs font-medium">
+                            <i class="fa-solid fa-eye mr-1"></i> Dettagli
+                        </button>
+                        <button onclick="deleteReceipt('${r.id}')" class="px-2 font-medium py-1 bg-rose-500/10 hover:bg-rose-500/30 text-rose-400 rounded-lg text-xs">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        };
+
+        // Render Receipts View Switch router
+        function renderReceiptsViews() {
+            renderUserView();
+            renderAdminView();
+        }
+
+        // RECEIPT MODAL LOGIC & CALCULATION ENGINE
+        let rowCounter = 0;
+
+        window.openReceiptModal = function() {
+            document.getElementById('receiptForm').reset();
+            document.getElementById('recDate').valueAsDate = new Date();
+            document.getElementById('receiptRowsContainer').innerHTML = '';
+            rowCounter = 0;
+            // Add default 2 rows
+            addReceiptRow();
+            addReceiptRow();
+            updateCalculatedTotals();
+            document.getElementById('receiptModal').classList.remove('hidden');
+        };
+
+        window.closeReceiptModal = function() {
+            document.getElementById('receiptModal').classList.add('hidden');
+        };
+
+        window.addReceiptRow = function() {
+            rowCounter++;
+            const container = document.getElementById('receiptRowsContainer');
+            const rowDiv = document.createElement('div');
+            rowDiv.id = `recRow_${rowCounter}`;
+            rowDiv.className = "grid grid-cols-12 gap-2 items-center bg-slate-900/60 p-2.5 rounded-xl border border-slate-700/60";
+            
+            rowDiv.innerHTML = `
+                <div class="col-span-5">
+                    <input type="text" placeholder="Nome prodotto" required class="item-name w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
+                </div>
+                <div class="col-span-2">
+                    <input type="number" min="1" value="1" placeholder="Qtà" oninput="updateCalculatedTotals()" required class="item-qty w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white text-center outline-none">
+                </div>
+                <div class="col-span-3">
+                    <input type="number" step="0.01" min="0" placeholder="€ Prezzo" oninput="updateCalculatedTotals()" required class="item-price w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white text-right outline-none">
+                </div>
+                <div class="col-span-2 text-right">
+                    <button type="button" onclick="removeReceiptRow('${rowCounter}')" class="text-slate-500 hover:text-rose-400 p-1">
+                        <i class="fa-solid fa-xmark text-base"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(rowDiv);
+            updateCalculatedTotals();
+        };
+
+        window.removeReceiptRow = function(id) {
+            const row = document.getElementById(`recRow_${id}`);
+            if (row) {
+                row.remove();
+                updateCalculatedTotals();
+            }
+        };
+
+        window.updateCalculatedTotals = function() {
+            const rowElements = document.querySelectorAll('#receiptRowsContainer > div');
+            let subtotal = 0;
+
+            rowElements.forEach(row => {
+                const qty = parseFloat(row.querySelector('.item-qty')?.value || 0);
+                const price = parseFloat(row.querySelector('.item-price')?.value || 0);
+                subtotal += (qty * price);
+            });
+
+            const discount = parseFloat(document.getElementById('recDiscount')?.value || 0);
+            const tip = parseFloat(document.getElementById('recTip')?.value || 0);
+
+            // Standard tax representation included in total
+            const grandTotal = Math.max(0, subtotal - discount + tip);
+
+            document.getElementById('calcSubtotal').textContent = `€${subtotal.toFixed(2)}`;
+            document.getElementById('calcTax').textContent = `€${(grandTotal * 0.22 / 1.22).toFixed(2)} (IVA 22%)`;
+            document.getElementById('calcGrandTotal').textContent = `€${grandTotal.toFixed(2)}`;
+        };
+
+        // Save Receipt to Firestore Public Collection
+        window.handleSaveReceipt = async function(e) {
+            e.preventDefault();
+            if (!currentUser) return;
+
+            const title = document.getElementById('recTitle').value.trim();
+            const date = document.getElementById('recDate').value;
+            const discount = parseFloat(document.getElementById('recDiscount').value || 0);
+            const tip = parseFloat(document.getElementById('recTip').value || 0);
+
+            const rowElements = document.querySelectorAll('#receiptRowsContainer > div');
+            const items = [];
+            let subtotal = 0;
+
+            rowElements.forEach(row => {
+                const name = row.querySelector('.item-name')?.value.trim() || 'Articolo';
+                const qty = parseFloat(row.querySelector('.item-qty')?.value || 1);
+                const price = parseFloat(row.querySelector('.item-price')?.value || 0);
+                const itemTotal = qty * price;
+                subtotal += itemTotal;
+                items.push({ name, qty, price, total: itemTotal });
+            });
+
+            if (items.length === 0) {
+                alert("Aggiungi almeno un articolo allo scontrino.");
+                return;
+            }
+
+            const grandTotal = Math.max(0, subtotal - discount + tip);
+            const receiptId = 'rec_' + Date.now();
+
+            const receiptPayload = {
+                id: receiptId,
+                title: title,
+                date: date,
+                userNick: currentUser.nick,
+                userId: currentUser.uid,
+                subtotal: subtotal,
+                discount: discount,
+                tip: tip,
+                grandTotal: grandTotal,
+                items: items,
+                createdAt: new Date().toISOString()
+            };
+
+            try {
+                // Save to strict public collection path
+                const pubDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'receipts', receiptId);
+                await setDoc(pubDocRef, receiptPayload);
+                closeReceiptModal();
+            } catch (err) {
+                console.error("Errore salvataggio scontrino:", err);
+            }
+        };
+
+        // Show Details Modal
+        window.showDetailsModal = function(receiptId) {
+            const rec = receiptsData.find(r => r.id === receiptId);
+            if (!rec) return;
+
+            document.getElementById('detTitle').textContent = rec.title;
+            document.getElementById('detMeta').textContent = `Caricato da ${rec.userNick} il ${rec.date}`;
+            document.getElementById('detSubtotal').textContent = `€${(rec.subtotal || 0).toFixed(2)}`;
+            document.getElementById('detDiscount').textContent = `-€${(rec.discount || 0).toFixed(2)}`;
+            document.getElementById('detTip').textContent = `+€${(rec.tip || 0).toFixed(2)}`;
+            document.getElementById('detTotal').textContent = `€${(rec.grandTotal || 0).toFixed(2)}`;
+
+            const itemsTbody = document.getElementById('detItemsTable');
+            itemsTbody.innerHTML = (rec.items || []).map(item => `
+                <tr>
+                    <td class="py-2 font-medium text-white">${escapeHtml(item.name)}</td>
+                    <td class="py-2 text-center text-slate-400">${item.qty}</td>
+                    <td class="py-2 text-right text-slate-400">€${item.price.toFixed(2)}</td>
+                    <td class="py-2 text-right font-semibold text-white">€${item.total.toFixed(2)}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('detailsModal').classList.remove('hidden');
+        };
+
+        window.closeDetailsModal = function() {
+            document.getElementById('detailsModal').classList.add('hidden');
+        };
+
+        // Delete Receipt Function
+        window.deleteReceipt = async function(receiptId) {
+            try {
+                const pubDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'receipts', receiptId);
+                await deleteDoc(pubDocRef);
+            } catch (err) {
+                console.error("Errore eliminazione:", err);
+            }
+        };
+
+        // Helper to prevent HTML Injection
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
+        }
+
+        // Initialize session on load
+        loadStoredUserSession();
+    </script>
+</body>
+</html>
